@@ -79,10 +79,16 @@ export const DashboardPage: React.FC = () => {
     });
   }, [registrations, channelFilter]);
 
-  // Compute metrics from the active filtered registrations and budget
+  // Compute metrics from the active filtered registrations and budget (including simulated data based on toggle)
   const metrics: CampaignMetrics = useMemo(() => {
     return calculateCampaignMetrics(filteredRegistrations, budget);
   }, [filteredRegistrations, budget]);
+
+  // Compute metrics based only on live registrations (ignoring demo data) for the progress card
+  const liveMetrics: CampaignMetrics = useMemo(() => {
+    const liveRegs = registrations.filter((r) => !r.is_demo);
+    return calculateCampaignMetrics(liveRegs, budget);
+  }, [registrations, budget]);
 
   // Top Referral Codes breakdown
   const referralCodeCounts = useMemo(() => {
@@ -151,6 +157,35 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards Row (Exact assignment fields) */}
+      {/* New Campaign Progress & Next Action Card */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-4">
+        <h3 className="text-sm font-medium text-white mb-2">Campaign Progress &amp; Next Action</h3>
+        <div className="flex items-center mb-2">
+          <div className="w-full bg-slate-700 h-2 rounded">
+            <div className="bg-emerald-500 h-2 rounded" style={{ width: `${liveMetrics.progressPercentage}%` }}></div>
+          </div>
+          <span className="ml-2 text-xs text-slate-300">{liveMetrics.progressPercentage}%</span>
+        </div>
+        <p className="text-xs text-slate-300 mb-1">
+          {liveMetrics.totalUniqueRegistrations} / {liveMetrics.targetRegistrations} registrations
+        </p>
+        <p className="text-xs text-slate-400">
+          {(() => {
+            const liveCount = liveMetrics.totalUniqueRegistrations;
+            const target = liveMetrics.targetRegistrations;
+            const elapsedDays = 5;
+            const totalDays = 7;
+            if (liveCount === 0) return 'Launch a small, trackable acquisition test.';
+            const actualPace = liveCount / elapsedDays;
+            const remaining = target - liveCount;
+            const remainingDays = totalDays - elapsedDays;
+            if (remainingDays <= 0) return 'Goal reached or campaign period ended.';
+            const requiredPace = remaining / remainingDays;
+            if (requiredPace > actualPace) return 'Review acquisition channels and conversion.';
+            return 'Current pace is on track.';
+          })()}
+        </p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         <StatCard
